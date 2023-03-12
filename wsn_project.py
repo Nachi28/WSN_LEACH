@@ -15,7 +15,7 @@ class WSN(object):
 
     xm = 200  # Length of the yard
     ym = 200  # Width of the yard
-    n = 64   # total number of nodes
+    n = 10  # total number of nodes
     sink = None  # Sink node
     nodes = None  # All sensor nodes set
     # Energy model (all values in Joules)
@@ -26,7 +26,9 @@ class WSN(object):
     Efs = 10 * (10 ** (-12))     # Energy of free space model: 10pJ/bit/m2
     Emp = 0.0013 * (10 ** (-12))  # Energy of multi path model: 0.0013pJ/bit/m4
     EDA = 5 * (10 ** (-9))       # Data aggregation energy: 5nJ/bit
-    f_r = 0.6                    # fusion_rate: 0 means perfect fusion
+
+    # PARAMETER 7 (Packet loss percentage)
+    f_r = 0.1               # fusion_rate: 0 means perfect fusion
 
     # PARAMETER 6
     # Message
@@ -97,6 +99,7 @@ class Node(object):
         self.xm = np.random.random() * WSN.xm
         self.ym = np.random.random() * WSN.ym
         self.energy = Node.energy_init
+        self.packets = WSN.DM
         self.type = "N"  # "N" = Node (Non-CH):The point type is a normal node
         # G is the set of nodes that have not been cluster-heads in the last 1/p rounds.
         self.G = 0  # the flag determines whether it's a CH or not: 0 means it is not selected as the cluster head, and 1 means it is selected as the cluster head
@@ -326,10 +329,16 @@ class Leach(object):
         # Exit if no clusters are formed this round
         if not cluster:
             return None
+        total_packetloss = 0
         for key, values in cluster.items():
+
             head = nodes[int(key)]
+            # print(f"KEY ==== {key}") cluster head
+            # print(f"VALUES ==== {values}") cluster members
+
             n_member = len(values)  # Number of cluster members
             # Members in the cluster send data to the cluster head node
+            total_packetloss_for_ch = 0
             for x in values:
                 member = nodes[int(x)]
                 dis = WSN.dist(member, head)
@@ -337,21 +346,51 @@ class Leach(object):
                 # Cluster members send data
                 member.energy -= WSN.trans_energy(WSN.DM, dis)
                 head.energy -= WSN.ERX * WSN.DM  # Cluster head receives data
+
+                #  Packet loss
+                packetloss = (dis * np.random.random() *
+                              10000) % (WSN.f_r * WSN.DM)
+                member.packets -= packetloss
+
+                # print(f"\nCurrent node = {x}")
+                # print(
+                #     f"Nodes --> {x} sent data to cluster head --> {key} \nPACKET loss = {packetloss}\n PACKETS remaining = {member.packets}")
+
+                # adding packet loss for each node in a cluster head
+                total_packetloss_for_ch += packetloss
+                # print(f"\n\n test addition{total_packetloss_for_ch:.2f}\n\n")
+                # adding packet loss for all nodes and all clusteer head
+
+            print(
+                f"\n\nData transmission complete for cluster head {key}\nNodes --> {values} sent data to cluster head --> {key}\n Total Packets lost for CH = {total_packetloss_for_ch:.2f}")
+
             # The distance of from head to sink
             d_h2s = WSN.dist(head, WSN.sink)
+
             if n_member == 0:  # If there are no cluster members, only the cluster head collects its own information and sends it to the base station
+                # 0 packet loss in cluster head to sink
                 energy = WSN.trans_energy(WSN.DM, d_h2s)
             else:
                 # Plus the data collected by the cluster head itself, the new data package after fusion
                 new_data = WSN.DM * (n_member + 1)
                 E_DA = WSN.EDA * new_data  # Energy Consumption of Aggregated Data
+
                 if WSN.f_r == 0:  # f_r is 0 to represent the perfect fusion of data
                     new_data_ = WSN.DM
                 else:
-                    new_data_ = new_data * WSN.f_r
+                    new_data_ = total_packetloss_for_ch
                 E_Trans = WSN.trans_energy(new_data_, d_h2s)
                 energy = E_DA + E_Trans
+
             head.energy -= energy
+            total_packetloss += total_packetloss_for_ch
+
+        print(
+            f"""\n\n##########################################
+//////////////////////////////////////////
+\nTotal packet loss in this round ==> {total_packetloss:.2f}\n Percentage ==> {(total_packetloss/(WSN.DM * WSN.n )*100):.2f} %\n
+//////////////////////////////////////////
+########################################## """)
 
     def leach():
         Leach.set_up_phase()
