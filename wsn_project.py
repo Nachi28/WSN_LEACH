@@ -1,17 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# In case of Chinese display problems, you can add the following code
-from pylab import mpl
-# Solve the problem that the negative sign '-' is displayed as a square when saving an image
-mpl.rcParams['axes.unicode_minus'] = False
-
 
 class WSN(object):
     """ The network architecture with desired parameters """
 
     # PARAMETER 5(DISTANCE)
-    # Distance increases transfer energy increases.... node die fast
+    # Distance increases transfer energy increases.... nodes die faster
 
     xm = 200  # Length of the yard
     ym = 200  # Width of the yard
