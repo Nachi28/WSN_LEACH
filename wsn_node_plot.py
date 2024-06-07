@@ -316,10 +316,10 @@ class Leach(object):
 
     def to_excel(data):
         workbook = openpyxl.load_workbook(
-            'WSN\hi.xlsx')  # Load an existing file
+            'hi.xlsx')  # Load an existing file
         worksheet = workbook['Sheet1']
         worksheet.append(data)
-        workbook.save('WSN\hi.xlsx')
+        workbook.save('hi.xlsx')
 
     def set_up_phase():
         Leach.cluster_head_selection()
